@@ -20,3 +20,6 @@
 # IDE/editor files
 .vscode/
 .idea/
+
+# GitHub Actions Google authentication
+gha-creds-*.json

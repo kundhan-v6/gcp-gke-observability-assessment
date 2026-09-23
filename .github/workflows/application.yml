@@ -1,0 +1,93 @@
+name: Application Build and Publish
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'apps/**'
+      - '.github/workflows/application.yml'
+
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/**'
+      - '.github/workflows/application.yml'
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  PROJECT_ID: gcp-gke-assessment
+  REGISTRY_HOST: us-docker.pkg.dev
+  REPOSITORY: gke-apps
+
+jobs:
+  build:
+    name: Build Application Containers
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Build App A
+        run: |
+          docker build \
+            -t app-a:test \
+            ./apps/app-a
+
+      - name: Build App B
+        run: |
+          docker build \
+            -t app-b:test \
+            ./apps/app-b
+
+      - name: Authenticate to Google Cloud
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: gcp-gke-assessment
+          workload_identity_provider: projects/154908148121/locations/global/workloadIdentityPools/github-actions/providers/github-provider
+          service_account: github-terraform@gcp-gke-assessment.iam.gserviceaccount.com
+
+      - name: Setup Google Cloud CLI
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: Configure Docker Authentication
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          gcloud auth configure-docker ${REGISTRY_HOST} --quiet
+
+      - name: Tag Application Images
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          APP_A_IMAGE="${REGISTRY_HOST}/${PROJECT_ID}/${REPOSITORY}/app-a"
+          APP_B_IMAGE="${REGISTRY_HOST}/${PROJECT_ID}/${REPOSITORY}/app-b"
+
+          docker tag app-a:test "${APP_A_IMAGE}:${GITHUB_SHA}"
+          docker tag app-a:test "${APP_A_IMAGE}:latest"
+
+          docker tag app-b:test "${APP_B_IMAGE}:${GITHUB_SHA}"
+          docker tag app-b:test "${APP_B_IMAGE}:latest"
+
+      - name: Push App A
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          APP_A_IMAGE="${REGISTRY_HOST}/${PROJECT_ID}/${REPOSITORY}/app-a"
+
+          docker push "${APP_A_IMAGE}:${GITHUB_SHA}"
+          docker push "${APP_A_IMAGE}:latest"
+
+      - name: Push App B
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          APP_B_IMAGE="${REGISTRY_HOST}/${PROJECT_ID}/${REPOSITORY}/app-b"
+
+          docker push "${APP_B_IMAGE}:${GITHUB_SHA}"
+          docker push "${APP_B_IMAGE}:latest"

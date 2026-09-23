@@ -32,3 +32,23 @@ output "secondary_subnet_name" {
   description = "Secondary GKE subnet"
   value       = google_compute_subnetwork.secondary.name
 }
+
+output "primary_gke_cluster_name" {
+  description = "Primary GKE cluster name"
+  value       = google_container_cluster.primary.name
+}
+
+output "primary_gke_cluster_location" {
+  description = "Primary GKE cluster location"
+  value       = google_container_cluster.primary.location
+}
+
+output "secondary_gke_cluster_name" {
+  description = "Secondary GKE cluster name"
+  value       = google_container_cluster.secondary.name
+}
+
+output "secondary_gke_cluster_location" {
+  description = "Secondary GKE cluster location"
+  value       = google_container_cluster.secondary.location
+}

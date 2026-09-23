@@ -55,6 +55,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Validate manual branch apply request
         if: github.event_name == 'workflow_dispatch' && inputs.deployment == 'apply'

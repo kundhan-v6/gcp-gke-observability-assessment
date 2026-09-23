@@ -6,7 +6,7 @@ resource "google_container_node_pool" "primary_apps" {
   node_count = 1
 
   node_config {
-    machine_type = "e2-medium"
+    machine_type = "e2-standard-2"
     disk_type    = "pd-balanced"
     disk_size_gb = 30
 
@@ -33,7 +33,7 @@ resource "google_container_node_pool" "secondary_apps" {
   node_count = 1
 
   node_config {
-    machine_type = "e2-medium"
+    machine_type = "e2-standard-2"
     disk_type    = "pd-balanced"
     disk_size_gb = 30
 

@@ -23,3 +23,6 @@
 
 # GitHub Actions Google authentication
 gha-creds-*.json
+
+# GitHub Actions GKE credentials
+gha-kubeconfig-*

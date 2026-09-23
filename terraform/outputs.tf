@@ -52,3 +52,13 @@ output "secondary_gke_cluster_location" {
   description = "Secondary GKE cluster location"
   value       = google_container_cluster.secondary.location
 }
+
+output "artifact_registry_repository" {
+  description = "Artifact Registry repository name"
+  value       = google_artifact_registry_repository.apps.repository_id
+}
+
+output "artifact_registry_location" {
+  description = "Artifact Registry location"
+  value       = google_artifact_registry_repository.apps.location
+}

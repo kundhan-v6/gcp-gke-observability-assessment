@@ -5,8 +5,8 @@ resource "google_bigquery_dataset" "observability" {
   description   = "Application and GKE platform logs for the assessment"
   location      = "US"
 
-  # Limit newly created partitioned log tables to seven days of retention.
-  default_partition_expiration_ms = 604800000
+  # Limit newly created partitioned log tables to 30 days of retention.
+  default_partition_expiration_ms = 2592000000
 
   # A test cleanup must not silently delete a dataset containing log evidence.
   delete_contents_on_destroy = false

@@ -1,0 +1,22 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+
+# Terraform variable secrets
+*.tfvars
+!terraform.tfvars.example
+
+# Credentials and secrets
+*.json
+*.pem
+*.key
+.env
+
+# Operating system
+.DS_Store
+
+# IDE/editor files
+.vscode/
+.idea/

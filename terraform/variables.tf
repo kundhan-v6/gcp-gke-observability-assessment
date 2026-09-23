@@ -21,3 +21,15 @@ variable "environment" {
   type        = string
   default     = "assessment"
 }
+
+variable "primary_zone" {
+  description = "Zone for the primary GKE cluster"
+  type        = string
+  default     = "us-central1-a"
+}
+
+variable "secondary_zone" {
+  description = "Zone for the secondary GKE cluster"
+  type        = string
+  default     = "us-east1-b"
+}

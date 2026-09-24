@@ -48,6 +48,24 @@ resource "google_logging_project_sink" "gke_to_bigquery" {
         OR resource.labels.cluster_name="gke-secondary"
       )
     )
+    OR
+    (
+      resource.type="gce_subnetwork"
+      AND logName="projects/${var.project_id}/logs/compute.googleapis.com%2Fvpc_flows"
+      AND (
+        resource.labels.subnetwork_name="gke-primary-subnet"
+        OR resource.labels.subnetwork_name="gke-secondary-subnet"
+      )
+    )
+    OR
+    (
+      resource.type="gce_subnetwork"
+      AND logName="projects/${var.project_id}/logs/compute.googleapis.com%2Ffirewall"
+      AND (
+        resource.labels.subnetwork_name="gke-primary-subnet"
+        OR resource.labels.subnetwork_name="gke-secondary-subnet"
+      )
+    )
   EOT
 
   unique_writer_identity = true

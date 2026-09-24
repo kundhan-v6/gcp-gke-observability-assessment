@@ -20,6 +20,14 @@ resource "google_container_cluster" "primary" {
     workload_pool = "${var.project_id}.svc.id.goog"
   }
 
+  logging_config {
+    enable_components = [
+      "SYSTEM_COMPONENTS",
+      "WORKLOADS",
+      "KCP_HPA",
+    ]
+  }
+
   node_config {
     machine_type = "e2-medium"
     disk_type    = "pd-balanced"
@@ -68,6 +76,14 @@ resource "google_container_cluster" "secondary" {
 
   workload_identity_config {
     workload_pool = "${var.project_id}.svc.id.goog"
+  }
+
+  logging_config {
+    enable_components = [
+      "SYSTEM_COMPONENTS",
+      "WORKLOADS",
+      "KCP_HPA",
+    ]
   }
 
   node_config {

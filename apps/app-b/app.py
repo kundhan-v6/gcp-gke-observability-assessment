@@ -50,6 +50,7 @@ def log_request(response):
 
 
 @app.route("/")
+@app.route("/app-b")
 def home():
     return """
     <html>
@@ -66,6 +67,7 @@ def home():
 
 
 @app.route("/health")
+@app.route("/app-b/health")
 def health():
     return jsonify(
         app=APP_NAME,
@@ -75,6 +77,7 @@ def health():
 
 
 @app.route("/slow")
+@app.route("/app-b/slow")
 def slow():
     time.sleep(0.8)
 
@@ -85,6 +88,7 @@ def slow():
 
 
 @app.route("/error")
+@app.route("/app-b/error")
 def error():
     return jsonify(
         app=APP_NAME,

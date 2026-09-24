@@ -231,3 +231,24 @@ jobs:
 
           kubectl -n assessment get pods
           kubectl -n assessment get services
+
+
+      - name: Get Primary GKE Credentials for Multi Cluster Ingress
+        if: |
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && inputs.deployment == 'deploy')
+        uses: google-github-actions/get-gke-credentials@v3
+        with:
+          project_id: gcp-gke-assessment
+          cluster_name: gke-primary
+          location: us-central1-a
+
+      - name: Deploy Multi Cluster Services and Ingress
+        if: |
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && inputs.deployment == 'deploy')
+        run: |
+          kubectl apply -f kubernetes/multicluster-ingress.yaml
+
+          kubectl -n assessment get multiclusterservices
+          kubectl -n assessment get multiclusteringress

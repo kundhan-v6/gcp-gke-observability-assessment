@@ -58,3 +58,22 @@ resource "google_gke_hub_membership" "secondary" {
     google_project_service.gkehub
   ]
 }
+
+resource "google_gke_hub_feature" "multicluster_ingress" {
+  project  = var.project_id
+  name     = "multiclusteringress"
+  location = "global"
+
+  spec {
+    multiclusteringress {
+      config_membership = google_gke_hub_membership.primary.id
+    }
+  }
+
+  depends_on = [
+    google_project_service.multicluster_ingress,
+    google_project_service.multicluster_service_discovery,
+    google_gke_hub_membership.primary,
+    google_gke_hub_membership.secondary
+  ]
+}

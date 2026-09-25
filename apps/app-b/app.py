@@ -6,6 +6,7 @@ import time
 import uuid
 
 import requests
+import googlecloudprofiler
 from google.cloud import error_reporting
 from opentelemetry import trace
 from opentelemetry.exporter.cloud_trace import CloudTraceSpanExporter
@@ -33,6 +34,17 @@ logger.handlers.clear()
 logger.addHandler(handler)
 
 PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT", "gcp-gke-assessment")
+
+try:
+    googlecloudprofiler.start(
+        service=APP_NAME,
+        service_version=APP_VERSION,
+        project_id=PROJECT_ID,
+        verbose=2,
+    )
+except (ValueError, NotImplementedError) as exc:
+    logger.error("Cloud Profiler initialization failed: %s", exc)
+
 
 resource = Resource.create({
     "service.name": APP_NAME,

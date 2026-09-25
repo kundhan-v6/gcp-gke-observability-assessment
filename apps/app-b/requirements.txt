@@ -9,3 +9,4 @@ opentelemetry-instrumentation-requests
 opentelemetry-exporter-gcp-trace>=1.13,<2.0
 
 google-cloud-error-reporting>=1.16,<2.0
+google-cloud-profiler

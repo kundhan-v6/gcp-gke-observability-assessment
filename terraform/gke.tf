@@ -29,6 +29,12 @@ resource "google_container_cluster" "primary" {
     }
   }
 
+  addons_config {
+    gke_backup_agent_config {
+      enabled = true
+    }
+  }
+
   binary_authorization {
     evaluation_mode = "PROJECT_SINGLETON_POLICY_ENFORCE"
   }
@@ -97,6 +103,12 @@ resource "google_container_cluster" "secondary" {
     rotation_config {
       enabled           = true
       rotation_interval = "120s"
+    }
+  }
+
+  addons_config {
+    gke_backup_agent_config {
+      enabled = true
     }
   }
 

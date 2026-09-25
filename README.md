@@ -186,6 +186,25 @@ Validated behavior:
 - HTTPS App A → `HTTP/2 200`
 - HTTPS App B → `HTTP/2 200`
 
+## High Availability and Disaster Recovery
+
+The environment now includes tested disaster-recovery controls for the stateless GKE workloads:
+
+- two GKE clusters in separate regions
+- MultiClusterIngress and MultiClusterService across both clusters
+- scheduled Backup for GKE plans in opposite regions with 7-day retention
+- Secrets and volume data included in backups
+- Terraform-managed restore plans in both directions
+- Artifact Registry retention safeguards that keep all tagged images and the 10 most recent versions per package
+- controlled secondary-only traffic validation with successful responses from both public health endpoints
+- manual Backup for GKE validation with a successful backup
+- controlled restore validation from the secondary backup into the primary cluster
+- final read-only verification confirming both clusters healthy, both MCS cluster links restored, and both public endpoints healthy
+
+Detailed evidence is documented in [Disaster Recovery Validation](docs/disaster-recovery.md).
+
+The applications are intentionally stateless, so Cloud SQL, Memorystore, and Firestore are not provisioned. Database HA, PITR, and replication controls are therefore not applicable to the current implementation.
+
 ## Observability
 
 ### Cloud Logging
@@ -284,6 +303,6 @@ Remaining production-hardening considerations include:
 
 - stronger Binary Authorization enforcement instead of audit-only mode
 - organization-level governance and folder hierarchy
-- dedicated backup and disaster-recovery controls for future stateful workloads
+- database-specific HA, PITR, and replication controls if future stateful workloads are introduced
 - private GKE clusters if required by a production security model
 - additional policy, alerting, and operational controls appropriate to production environments

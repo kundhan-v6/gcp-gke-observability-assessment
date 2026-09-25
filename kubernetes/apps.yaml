@@ -81,7 +81,7 @@ metadata:
   name: app-a
   namespace: assessment
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   selector:
     app: app-a
   ports:
@@ -176,7 +176,7 @@ metadata:
   name: app-b
   namespace: assessment
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   selector:
     app: app-b
   ports:

@@ -33,3 +33,21 @@ variable "secondary_zone" {
   type        = string
   default     = "us-east1-b"
 }
+
+variable "dev_members" {
+  description = "IAM members for developers"
+  type        = list(string)
+  default     = []
+}
+
+variable "ops_members" {
+  description = "IAM members for operations engineers"
+  type        = list(string)
+  default     = []
+}
+
+variable "sre_members" {
+  description = "IAM members for SRE engineers"
+  type        = list(string)
+  default     = []
+}

@@ -51,9 +51,11 @@ Application source:
 Kubernetes manifests:
 
 - `kubernetes/apps.yaml`
+- `kubernetes/frontend-config.yaml`
 - `kubernetes/multicluster-ingress.yaml`
+- `kubernetes/secret-provider-class.yaml`
 
-The application GitHub Actions workflow builds both applications, pushes images to Artifact Registry, deploys both clusters, validates rollouts, and applies MultiClusterService and MultiClusterIngress resources.
+The application GitHub Actions workflow builds both applications, pushes images to Artifact Registry, deploys both clusters, validates rollouts, applies the Secret Manager CSI configuration, and applies MultiClusterService, FrontendConfig, and MultiClusterIngress resources.
 
 ## Validate Primary Cluster
 
@@ -84,29 +86,39 @@ kubectl get hpa -n assessment
 ## Validate Global Endpoints
 
 ```bash
-curl -i http://8.232.28.44/app-a/health
-curl -i http://8.232.28.44/app-b/health
-curl -i http://8.232.28.44/app-a/trace-demo
+curl -i https://gke.kundhanphotography.com/app-a/health
+curl -i https://gke.kundhanphotography.com/app-b/health
+curl -i https://gke.kundhanphotography.com/app-a/trace-demo
 ```
 
 Expected health result:
 
-`HTTP/1.1 200 OK`
+`HTTP/2 200`
+
+Validate the HTTP-to-HTTPS redirect separately:
+
+```bash
+curl -I http://gke.kundhanphotography.com/app-a/health
+```
+
+Expected redirect:
+
+`301 Moved Permanently`
 
 ## Generate Observability Traffic
 
 Slow responses:
 
 ```bash
-curl http://8.232.28.44/app-a/slow
-curl http://8.232.28.44/app-b/slow
+curl https://gke.kundhanphotography.com/app-a/slow
+curl https://gke.kundhanphotography.com/app-b/slow
 ```
 
 Intentional errors:
 
 ```bash
-curl http://8.232.28.44/app-a/error
-curl http://8.232.28.44/app-b/error
+curl https://gke.kundhanphotography.com/app-a/error
+curl https://gke.kundhanphotography.com/app-b/error
 ```
 
 ## BigQuery

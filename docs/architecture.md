@@ -199,9 +199,27 @@ Intentional `/error` endpoints report exceptions to Google Cloud Error Reporting
 - GitHub OIDC / Workload Identity Federation
 - Least-privilege Grafana reader service account
 
-## Availability
+## Availability and Disaster Recovery
 
 The same stateless applications run in two separate GKE clusters. MultiClusterIngress and MultiClusterService provide global health-aware traffic distribution across the two backends.
+
+Implemented and validated DR controls include:
+
+- primary GKE cluster in `us-central1-a`
+- secondary GKE cluster in `us-east1-b`
+- scheduled Backup for GKE plans stored cross-region
+- 7-day backup retention
+- Secrets and volume data included
+- restore plans in both directions
+- Artifact Registry keep/cleanup policies
+- controlled secondary-only traffic validation
+- successful manual backup
+- successful restore from the secondary-cluster backup into the primary cluster
+- final verification of both clusters, both MCS memberships, and both public health endpoints
+
+See [Disaster Recovery Validation](disaster-recovery.md) for the exact evidence and workflow run references.
+
+Because the applications are stateless, Cloud SQL, Memorystore, and Firestore are not part of this architecture. Database-specific replication, HA, automated backup, and PITR controls would be added only if stateful services are introduced.
 
 ## Production Extensions
 
@@ -212,5 +230,5 @@ Additional production hardening would typically include:
 - stronger Binary Authorization enforcement
 - organization-level governance and folder hierarchy
 - private GKE clusters if required by the production security model
-- backup and disaster-recovery controls for future stateful workloads
+- database-specific backup, PITR, and replication controls if future stateful workloads are introduced
 - additional alerting, policy, and operational controls

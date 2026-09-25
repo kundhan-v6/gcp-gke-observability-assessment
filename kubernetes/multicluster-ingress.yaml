@@ -106,6 +106,8 @@ metadata:
   namespace: assessment
   annotations:
     networking.gke.io/static-ip: "8.232.28.44"
+    networking.gke.io/pre-shared-certs: "gke-kundhanphotography-cert"
+    networking.gke.io/frontend-config: "assessment-frontend-config"
 spec:
   template:
     spec:

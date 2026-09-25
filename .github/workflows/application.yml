@@ -248,7 +248,9 @@ jobs:
           (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
           (github.event_name == 'workflow_dispatch' && inputs.deployment == 'deploy')
         run: |
+          kubectl apply -f kubernetes/frontend-config.yaml
           kubectl apply -f kubernetes/multicluster-ingress.yaml
 
+          kubectl -n assessment get frontendconfig
           kubectl -n assessment get multiclusterservices
           kubectl -n assessment get multiclusteringress

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project implements an end-to-end Google Cloud architecture with two Google Kubernetes Engine (GKE) clusters, two stateless web applications, global multi-cluster traffic management, infrastructure as code, CI/CD, security controls, centralized logging, metrics, tracing, profiling, error reporting, BigQuery analytics, and Grafana dashboards.
+This project implements an end-to-end Google Cloud architecture with two Google Kubernetes Engine (GKE) clusters, two stateless web applications, global multi-cluster traffic management, HTTPS/TLS, infrastructure as code, CI/CD, security controls, centralized logging, metrics, tracing, profiling, error reporting, BigQuery analytics, and Grafana dashboards.
 
 The implementation uses:
 
@@ -10,6 +10,10 @@ The implementation uses:
 - Primary GKE cluster: `gke-primary` in `us-central1-a`
 - Secondary GKE cluster: `gke-secondary` in `us-east1-b`
 - Global application IP: `8.232.28.44`
+- Public application hostname: `gke.kundhanphotography.com`
+- Cloud DNS for public DNS resolution
+- Google-managed TLS certificate for trusted HTTPS
+- HTTP-to-HTTPS redirect on the global frontend
 - Terraform for infrastructure
 - GitHub Actions for CI/CD
 - MultiClusterIngress and MultiClusterService for global traffic
@@ -23,13 +27,19 @@ The implementation uses:
 
 ### Working cluster with accessible application endpoint
 
-Validated endpoints:
+Validated HTTPS endpoints:
 
-- Application A health: `http://8.232.28.44/app-a/health`
-- Application B health: `http://8.232.28.44/app-b/health`
-- Distributed trace demo: `http://8.232.28.44/app-a/trace-demo`
+- Application A health: `https://gke.kundhanphotography.com/app-a/health`
+- Application B health: `https://gke.kundhanphotography.com/app-b/health`
+- Distributed trace demo: `https://gke.kundhanphotography.com/app-a/trace-demo`
 
-The health endpoints return `HTTP/1.1 200 OK`, and the trace demo confirms Application A can call Application B successfully.
+Both health endpoints return `HTTP/2 200` over a trusted Google-managed TLS certificate.
+
+Plain HTTP requests are redirected permanently to HTTPS. For example:
+
+`http://gke.kundhanphotography.com/app-a/health → 301 → https://gke.kundhanphotography.com:443/app-a/health`
+
+The trace demo confirms Application A can call Application B successfully.
 
 ### Grafana dashboard
 
@@ -72,7 +82,9 @@ See the full [Architecture Documentation](docs/architecture.md).
 
 High-level traffic flow:
 
-`User → Global Load Balancer → Cloud Armor → MultiClusterIngress → MultiClusterService → NEGs → GKE pods`
+`User → Cloud DNS → Global HTTPS Load Balancer → TLS Termination → Cloud Armor → MultiClusterIngress → MultiClusterService → NEGs → GKE pods`
+
+HTTP traffic is redirected to HTTPS before application traffic is served.
 
 The same applications run in both clusters to demonstrate cross-region redundancy.
 
@@ -96,6 +108,7 @@ The same applications run in both clusters to demonstrate cross-region redundanc
     │   └── gke-multicluster-observability.json
     ├── kubernetes/
     │   ├── apps.yaml
+    │   ├── frontend-config.yaml
     │   └── multicluster-ingress.yaml
     └── terraform/
 
@@ -112,10 +125,13 @@ Terraform manages the core Google Cloud infrastructure, including:
 - Secret Manager
 - Workload Identity
 - Multi-cluster configuration
+- Global static IP
 - Cloud Armor
 - BigQuery log export
 - Grafana reader IAM
 - Binary Authorization
+
+Kubernetes and multi-cluster application resources are maintained as declarative manifests and deployed through GitHub Actions.
 
 See [Setup Guide](docs/setup-guide.md).
 
@@ -137,11 +153,37 @@ Each application uses:
 
 Application A includes `/app-a/trace-demo`, which calls Application B and creates a distributed trace.
 
-## Global Traffic Management
+## Global Traffic Management and HTTPS
 
 Application Services use `ClusterIP`. They are not exposed through separate per-application public load balancers.
 
-External traffic enters through the single global endpoint and is routed through MultiClusterIngress and MultiClusterService to healthy backends across both clusters.
+External traffic uses:
+
+- Domain: `gke.kundhanphotography.com`
+- Cloud DNS A record → `8.232.28.44`
+- Global static IP: `8.232.28.44`
+- Google-managed TLS certificate: `gke-kundhanphotography-cert`
+- HTTPS frontend on port 443
+- HTTP frontend on port 80 with permanent redirect to HTTPS
+- Cloud Armor WAF policy
+- MultiClusterIngress
+- MultiClusterService
+- Healthy backends across both GKE clusters
+
+The MultiClusterIngress references:
+
+- `networking.gke.io/static-ip: "8.232.28.44"`
+- `networking.gke.io/pre-shared-certs: "gke-kundhanphotography-cert"`
+- `networking.gke.io/frontend-config: "assessment-frontend-config"`
+
+The `FrontendConfig` enables permanent HTTP-to-HTTPS redirection.
+
+Validated behavior:
+
+- HTTP App A → `301 Moved Permanently`
+- HTTP App B → `301 Moved Permanently`
+- HTTPS App A → `HTTP/2 200`
+- HTTPS App B → `HTTP/2 200`
 
 ## Observability
 
@@ -186,6 +228,9 @@ The `/error` endpoints intentionally generate exceptions for Error Reporting val
 
 Implemented security controls include:
 
+- HTTPS-only application access through HTTP-to-HTTPS redirection
+- Google-managed TLS certificate
+- Cloud DNS
 - Workload Identity
 - Secret Manager
 - Cloud Armor
@@ -219,8 +264,11 @@ The application workflow:
 3. Deploys to `gke-primary`.
 4. Deploys to `gke-secondary`.
 5. Validates Kubernetes rollouts.
-6. Applies MultiClusterService resources.
-7. Applies MultiClusterIngress.
+6. Applies the HTTPS `FrontendConfig`.
+7. Applies MultiClusterService resources.
+8. Applies MultiClusterIngress with the static IP and TLS certificate configuration.
+
+The HTTPS implementation was merged to `main` through PR #11 and validated by the post-merge application deployment workflow.
 
 ## Design Decisions
 
@@ -228,14 +276,12 @@ See [Design Decisions and Rationale](docs/design-decisions.md).
 
 ## Known Limitations
 
-The assessment currently exposes the application through a static global IP over HTTP.
+The global application endpoint now uses Cloud DNS, a trusted Google-managed TLS certificate, HTTPS on port 443, and permanent HTTP-to-HTTPS redirection.
 
-A production implementation would normally add:
+Remaining production-hardening considerations include:
 
-- Cloud DNS
-- a custom domain
-- a managed TLS certificate
-- HTTPS-only traffic
-- stronger Binary Authorization enforcement
-- organization-level governance
-- persistent workload backup and disaster-recovery controls where applicable
+- stronger Binary Authorization enforcement instead of audit-only mode
+- organization-level governance and folder hierarchy
+- dedicated backup and disaster-recovery controls for future stateful workloads
+- private GKE clusters if required by a production security model
+- additional policy, alerting, and operational controls appropriate to production environments

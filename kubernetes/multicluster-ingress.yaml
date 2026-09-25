@@ -7,6 +7,8 @@ metadata:
   name: app-a-backend-config
   namespace: assessment
 spec:
+  securityPolicy:
+    name: gke-mci-cloud-armor
   healthCheck:
     checkIntervalSec: 10
     timeoutSec: 5
@@ -29,6 +31,8 @@ metadata:
   name: app-b-backend-config
   namespace: assessment
 spec:
+  securityPolicy:
+    name: gke-mci-cloud-armor
   healthCheck:
     checkIntervalSec: 10
     timeoutSec: 5

@@ -33,6 +33,9 @@ spec:
         app: app-a
     spec:
       serviceAccountName: app-runtime
+      nodeSelector:
+        iam.gke.io/gke-metadata-server-enabled: "true"
+
       containers:
         - name: app-a
           image: __APP_A_IMAGE__
@@ -45,12 +48,10 @@ spec:
             - configMapRef:
                 name: app-config
 
-          env:
-            - name: DEMO_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: DEMO_SECRET
+          volumeMounts:
+            - name: app-secret
+              mountPath: /var/secrets
+              readOnly: true
 
           resources:
             requests:
@@ -73,6 +74,14 @@ spec:
               port: 8080
             initialDelaySeconds: 10
             periodSeconds: 10
+
+      volumes:
+        - name: app-secret
+          csi:
+            driver: secrets-store-gke.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: app-secrets-gke
 
 ---
 apiVersion: v1
@@ -128,6 +137,9 @@ spec:
         app: app-b
     spec:
       serviceAccountName: app-runtime
+      nodeSelector:
+        iam.gke.io/gke-metadata-server-enabled: "true"
+
       containers:
         - name: app-b
           image: __APP_B_IMAGE__
@@ -140,12 +152,10 @@ spec:
             - configMapRef:
                 name: app-config
 
-          env:
-            - name: DEMO_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: DEMO_SECRET
+          volumeMounts:
+            - name: app-secret
+              mountPath: /var/secrets
+              readOnly: true
 
           resources:
             requests:
@@ -168,6 +178,14 @@ spec:
               port: 8080
             initialDelaySeconds: 10
             periodSeconds: 10
+
+      volumes:
+        - name: app-secret
+          csi:
+            driver: secrets-store-gke.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: app-secrets-gke
 
 ---
 apiVersion: v1

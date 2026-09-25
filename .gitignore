@@ -10,6 +10,8 @@
 
 # Credentials and secrets
 *.json
+# Allow the non-sensitive Grafana dashboard export used as assessment evidence
+!grafana/gke-multicluster-observability.json
 *.pem
 *.key
 .env

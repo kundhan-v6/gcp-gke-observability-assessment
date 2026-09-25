@@ -14,6 +14,10 @@ resource "google_container_node_pool" "primary_apps" {
       "https://www.googleapis.com/auth/cloud-platform"
     ]
 
+    workload_metadata_config {
+      mode = "GKE_METADATA"
+    }
+
     metadata = {
       disable-legacy-endpoints = "true"
     }
@@ -40,6 +44,10 @@ resource "google_container_node_pool" "secondary_apps" {
     oauth_scopes = [
       "https://www.googleapis.com/auth/cloud-platform"
     ]
+
+    workload_metadata_config {
+      mode = "GKE_METADATA"
+    }
 
     metadata = {
       disable-legacy-endpoints = "true"

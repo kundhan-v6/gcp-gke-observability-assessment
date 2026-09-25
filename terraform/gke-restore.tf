@@ -4,6 +4,12 @@ resource "google_project_iam_member" "github_terraform_gke_restore_admin" {
   member  = "serviceAccount:github-terraform@gcp-gke-assessment.iam.gserviceaccount.com"
 }
 
+resource "google_project_iam_member" "github_terraform_gke_admin" {
+  project = var.project_id
+  role    = "roles/gkebackup.admin"
+  member  = "serviceAccount:github-terraform@gcp-gke-assessment.iam.gserviceaccount.com"
+}
+
 resource "google_gke_backup_restore_plan" "primary_to_secondary" {
   project     = var.project_id
   name        = "gke-primary-to-secondary-restore"
@@ -25,7 +31,8 @@ resource "google_gke_backup_restore_plan" "primary_to_secondary" {
   }
 
   depends_on = [
-    google_project_iam_member.github_terraform_gke_restore_admin
+    google_project_iam_member.github_terraform_gke_restore_admin,
+    google_project_iam_member.github_terraform_gke_admin
   ]
 }
 
@@ -50,6 +57,7 @@ resource "google_gke_backup_restore_plan" "secondary_to_primary" {
   }
 
   depends_on = [
-    google_project_iam_member.github_terraform_gke_restore_admin
+    google_project_iam_member.github_terraform_gke_restore_admin,
+    google_project_iam_member.github_terraform_gke_admin
   ]
 }

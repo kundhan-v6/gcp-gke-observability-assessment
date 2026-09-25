@@ -51,3 +51,15 @@ variable "sre_members" {
   type        = list(string)
   default     = []
 }
+
+variable "app_demo_secret" {
+  description = "Application demo secret written to Secret Manager through the provider write-only argument"
+  type        = string
+  sensitive   = true
+}
+
+variable "app_demo_secret_wo_version" {
+  description = "Write-only version token used to trigger creation or rotation of the Secret Manager version"
+  type        = string
+  default     = "1"
+}

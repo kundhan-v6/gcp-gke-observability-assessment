@@ -20,6 +20,15 @@ resource "google_container_cluster" "primary" {
     workload_pool = "${var.project_id}.svc.id.goog"
   }
 
+  secret_manager_config {
+    enabled = true
+
+    rotation_config {
+      enabled           = true
+      rotation_interval = "120s"
+    }
+  }
+
   binary_authorization {
     evaluation_mode = "PROJECT_SINGLETON_POLICY_ENFORCE"
   }
@@ -80,6 +89,15 @@ resource "google_container_cluster" "secondary" {
 
   workload_identity_config {
     workload_pool = "${var.project_id}.svc.id.goog"
+  }
+
+  secret_manager_config {
+    enabled = true
+
+    rotation_config {
+      enabled           = true
+      rotation_interval = "120s"
+    }
   }
 
   binary_authorization {

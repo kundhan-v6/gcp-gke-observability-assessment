@@ -1,4 +1,13 @@
 apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: app-runtime
+  namespace: assessment
+  annotations:
+    iam.gke.io/gcp-service-account: gke-app-runtime@gcp-gke-assessment.iam.gserviceaccount.com
+
+---
+apiVersion: v1
 kind: ConfigMap
 metadata:
   name: app-config
@@ -23,6 +32,7 @@ spec:
       labels:
         app: app-a
     spec:
+      serviceAccountName: app-runtime
       containers:
         - name: app-a
           image: __APP_A_IMAGE__
@@ -117,6 +127,7 @@ spec:
       labels:
         app: app-b
     spec:
+      serviceAccountName: app-runtime
       containers:
         - name: app-b
           image: __APP_B_IMAGE__

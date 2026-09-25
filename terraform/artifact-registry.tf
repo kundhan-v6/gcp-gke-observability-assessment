@@ -4,6 +4,36 @@ resource "google_artifact_registry_repository" "apps" {
   description   = "Docker images for GKE assessment applications"
   format        = "DOCKER"
 
+  cleanup_policy_dry_run = false
+
+  cleanup_policies {
+    id     = "keep-tagged-images"
+    action = "KEEP"
+
+    condition {
+      tag_state = "TAGGED"
+    }
+  }
+
+  cleanup_policies {
+    id     = "keep-recent-versions"
+    action = "KEEP"
+
+    most_recent_versions {
+      keep_count = 10
+    }
+  }
+
+  cleanup_policies {
+    id     = "delete-old-untagged"
+    action = "DELETE"
+
+    condition {
+      tag_state  = "UNTAGGED"
+      older_than = "30d"
+    }
+  }
+
   labels = {
     environment = var.environment
     managed_by  = "terraform"

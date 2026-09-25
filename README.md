@@ -109,7 +109,8 @@ The same applications run in both clusters to demonstrate cross-region redundanc
     ├── kubernetes/
     │   ├── apps.yaml
     │   ├── frontend-config.yaml
-    │   └── multicluster-ingress.yaml
+    │   ├── multicluster-ingress.yaml
+    │   └── secret-provider-class.yaml
     └── terraform/
 
 ## Infrastructure as Code
@@ -145,7 +146,7 @@ Each application uses:
 - Multiple replicas
 - ClusterIP Service
 - ConfigMap
-- Kubernetes Secret
+- Secret Manager CSI-mounted runtime secret
 - CPU and memory resource requests and limits
 - Readiness probe
 - Liveness probe
@@ -267,8 +268,9 @@ The application workflow:
 6. Applies the HTTPS `FrontendConfig`.
 7. Applies MultiClusterService resources.
 8. Applies MultiClusterIngress with the static IP and TLS certificate configuration.
+9. Validates Secret Manager CSI mounts for both applications in both clusters.
 
-The HTTPS implementation was merged to `main` through PR #11 and validated by the post-merge application deployment workflow.
+The final HTTPS, DNS, multi-cluster routing, and Secret Manager CSI configuration has been validated through the deployment workflow.
 
 ## Design Decisions
 

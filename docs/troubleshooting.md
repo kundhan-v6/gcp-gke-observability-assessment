@@ -50,21 +50,21 @@ kubectl get nodes
 
 The Pods reached `Running` state and the Deployments reached their desired replica counts.
 
-Application health was then validated through the global Multi-Cluster Ingress endpoint:
+Application health was then validated through the global HTTPS Multi-Cluster Ingress endpoint:
 
 ```bash
-curl -i http://8.232.28.44/app-a/health
-curl -i http://8.232.28.44/app-b/health
+curl -i https://gke.kundhanphotography.com/app-a/health
+curl -i https://gke.kundhanphotography.com/app-b/health
 ```
 
 Both returned:
 
-`HTTP/1.1 200 OK`
+`HTTP/2 200`
 
 The service-to-service path was also validated:
 
 ```bash
-curl -i http://8.232.28.44/app-a/trace-demo
+curl -i https://gke.kundhanphotography.com/app-a/trace-demo
 ```
 
 Application A successfully called Application B and returned a successful downstream response.

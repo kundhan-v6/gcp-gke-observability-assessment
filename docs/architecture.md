@@ -10,8 +10,10 @@ The environment is managed through Terraform and GitHub Actions and includes glo
 
 ```mermaid
 flowchart TB
-    U[External User] --> GLB[Google Global Load Balancer<br/>8.232.28.44]
-    GLB --> CA[Cloud Armor WAF]
+    U[External User] --> DNS[Cloud DNS<br/>gke.kundhanphotography.com]
+    DNS --> GLB[Global HTTPS Load Balancer<br/>8.232.28.44]
+    GLB --> TLS[TLS Termination<br/>Google-managed certificate]
+    TLS --> CA[Cloud Armor WAF]
     CA --> MCI[MultiClusterIngress]
 
     MCI --> MCSA[MultiClusterService<br/>Application A]
@@ -111,7 +113,7 @@ Each application uses:
 - multiple Pod replicas
 - ClusterIP Service
 - ConfigMap
-- Kubernetes Secret
+- Secret Manager CSI-mounted runtime secret
 - readiness and liveness probes
 - CPU and memory requests and limits
 - Horizontal Pod Autoscaler
@@ -120,14 +122,17 @@ Application A also exposes `/app-a/trace-demo`, which calls Application B to dem
 
 ## Traffic Flow
 
-1. Client sends a request to `8.232.28.44`.
-2. Google's global load balancer receives the request.
-3. Cloud Armor evaluates the request.
-4. MultiClusterIngress selects the requested application path.
-5. MultiClusterService identifies healthy backends across both clusters.
-6. Network Endpoint Groups route the request to healthy Pods.
-7. Kubernetes Service distributes traffic to application replicas.
-8. The response returns to the client.
+1. Client resolves `gke.kundhanphotography.com` through Cloud DNS.
+2. The request reaches the global HTTPS load balancer on the static IP `8.232.28.44`.
+3. TLS is terminated using the Google-managed certificate.
+4. Cloud Armor evaluates the request.
+5. MultiClusterIngress selects the requested application path.
+6. MultiClusterService identifies healthy backends across both clusters.
+7. Network Endpoint Groups route the request to healthy Pods.
+8. Kubernetes Service distributes traffic to application replicas.
+9. The response returns to the client.
+
+Plain HTTP requests are redirected permanently to HTTPS before application traffic is served.
 
 Configured paths:
 
@@ -200,12 +205,12 @@ The same stateless applications run in two separate GKE clusters. MultiClusterIn
 
 ## Production Extensions
 
-A production implementation would typically add:
+The assessment already includes Cloud DNS, a custom hostname, a Google-managed TLS certificate, and HTTP-to-HTTPS redirection.
 
-- Cloud DNS
-- custom domain
-- managed TLS certificate
-- HTTPS-only traffic
+Additional production hardening would typically include:
+
 - stronger Binary Authorization enforcement
-- organization-level governance
-- backup policies for stateful workloads
+- organization-level governance and folder hierarchy
+- private GKE clusters if required by the production security model
+- backup and disaster-recovery controls for future stateful workloads
+- additional alerting, policy, and operational controls

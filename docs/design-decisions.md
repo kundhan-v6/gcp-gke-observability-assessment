@@ -11,10 +11,6 @@ Two clusters were deployed in separate Google Cloud locations to demonstrate mul
 
 GKE Standard was selected to provide explicit control over node pools, machine sizing, and troubleshooting.
 
-## Zonal Clusters
-
-Zonal clusters were used because of assessment quota and cost constraints. Cross-region redundancy is still demonstrated through two independent clusters.
-
 ## Stateless Applications
 
 Application A and Application B are stateless so the assessment can focus on Kubernetes, global traffic management, observability, automation, and security without introducing database replication complexity.
@@ -63,8 +59,14 @@ GitHub Actions handles infrastructure and application CI/CD.
 
 Authentication uses Workload Identity Federation and OIDC instead of stored Google Cloud service-account keys.
 
-## HTTP Global Endpoint
+## HTTPS Global Endpoint
 
-The assessment uses the static global IP `8.232.28.44` over HTTP.
+The applications are exposed through `https://gke.kundhanphotography.com` using Cloud DNS, a Google-managed TLS certificate, and HTTP-to-HTTPS redirection on the global frontend.
 
-A production environment would normally add Cloud DNS, a managed TLS certificate, and HTTPS-only access.
+## Free Trial Quota Constraint and Production Target
+
+The assessment environment intentionally uses two zonal GKE Standard clusters in separate regions rather than two fully regional, multi-zone clusters. The Google Cloud Free Trial project is limited by a project-wide `CPUS_ALL_REGIONS` quota of 12 vCPUs across all regions.
+
+A production-style topology with two regional clusters and multi-zone worker-node distribution would require substantially more compute capacity, especially when maintaining separate general-purpose and application node pools. To remain within the available quota while still demonstrating multi-region DevOps and SRE concepts, the implementation uses independent clusters in `us-central1-a` and `us-east1-b`, replicated application workloads, MultiClusterService, MultiClusterIngress, health checks, global load balancing, Cloud Armor, HTTPS, DNS, HPA, Workload Identity, and Secret Manager CSI.
+
+This design provides cross-region redundancy within the assessment constraints. In a production environment with standard quotas, each cluster would be deployed as a regional GKE cluster with worker nodes distributed across multiple zones to add zone-level control-plane and workload resilience.

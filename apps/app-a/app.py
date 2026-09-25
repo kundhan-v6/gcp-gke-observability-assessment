@@ -5,6 +5,17 @@ import sys
 import time
 import uuid
 
+import requests
+from google.cloud import error_reporting
+from opentelemetry import trace
+from opentelemetry.exporter.cloud_trace import CloudTraceSpanExporter
+from opentelemetry.instrumentation.flask import FlaskInstrumentor
+from opentelemetry.instrumentation.requests import RequestsInstrumentor
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.trace.sampling import ParentBased, TraceIdRatioBased
+
 from flask import Flask, g, jsonify, request
 
 app = Flask(__name__)
@@ -20,6 +31,36 @@ handler.setFormatter(logging.Formatter("%(message)s"))
 
 logger.handlers.clear()
 logger.addHandler(handler)
+
+PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT", "gcp-gke-assessment")
+
+resource = Resource.create({
+    "service.name": APP_NAME,
+    "service.version": APP_VERSION,
+    "deployment.environment.name": "assessment",
+})
+
+tracer_provider = TracerProvider(
+    resource=resource,
+    sampler=ParentBased(root=TraceIdRatioBased(1.0)),
+)
+
+tracer_provider.add_span_processor(
+    BatchSpanProcessor(
+        CloudTraceSpanExporter(project_id=PROJECT_ID)
+    )
+)
+
+trace.set_tracer_provider(tracer_provider)
+
+FlaskInstrumentor().instrument_app(app)
+RequestsInstrumentor().instrument()
+
+error_client = error_reporting.Client(
+    project=PROJECT_ID,
+    service=APP_NAME,
+    version=APP_VERSION,
+)
 
 
 @app.before_request
@@ -87,13 +128,40 @@ def slow():
     )
 
 
+@app.route("/trace-demo")
+@app.route("/app-a/trace-demo")
+def trace_demo():
+    response = requests.get(
+        "http://app-b/app-b/slow",
+        timeout=5,
+    )
+    response.raise_for_status()
+
+    return jsonify(
+        app=APP_NAME,
+        downstream="app-b",
+        downstream_status=response.status_code,
+        message="Distributed trace demo completed"
+    )
+
+
 @app.route("/error")
 @app.route("/app-a/error")
 def error():
-    return jsonify(
-        app=APP_NAME,
-        message="Intentional error for observability testing"
-    ), 500
+    try:
+        raise RuntimeError(
+            f"Intentional observability exception from {APP_NAME}"
+        )
+    except Exception:
+        error_client.report_exception()
+        logger.exception(
+            "Intentional exception reported to Google Cloud Error Reporting"
+        )
+
+        return jsonify(
+            app=APP_NAME,
+            message="Intentional error for observability testing"
+        ), 500
 
 
 if __name__ == "__main__":

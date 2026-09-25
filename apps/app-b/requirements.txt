@@ -1,2 +1,11 @@
 Flask>=3.0,<4.0
 gunicorn>=23,<24
+requests>=2.32,<3.0
+
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-instrumentation-flask
+opentelemetry-instrumentation-requests
+opentelemetry-exporter-gcp-trace>=1.13,<2.0
+
+google-cloud-error-reporting>=1.16,<2.0

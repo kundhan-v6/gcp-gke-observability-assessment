@@ -166,17 +166,12 @@ jobs:
         if: |
           (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
           (github.event_name == 'workflow_dispatch' && inputs.deployment == 'deploy')
-        env:
-          DEMO_SECRET: ${{ secrets.APP_DEMO_SECRET }}
         run: |
           kubectl create namespace assessment \
             --dry-run=client \
             -o yaml | kubectl apply -f -
 
-          kubectl -n assessment create secret generic app-secrets \
-            --from-literal=DEMO_SECRET="${DEMO_SECRET}" \
-            --dry-run=client \
-            -o yaml | kubectl apply -f -
+          kubectl apply -f kubernetes/secret-provider-class.yaml
 
           APP_A_IMAGE="${REGISTRY_HOST}/${PROJECT_ID}/${REPOSITORY}/app-a:${GITHUB_SHA}"
           APP_B_IMAGE="${REGISTRY_HOST}/${PROJECT_ID}/${REPOSITORY}/app-b:${GITHUB_SHA}"
@@ -191,6 +186,16 @@ jobs:
 
           kubectl -n assessment get pods
           kubectl -n assessment get services
+
+          APP_A_POD="$(kubectl -n assessment get pod -l app=app-a -o jsonpath='{.items[0].metadata.name}')"
+          APP_B_POD="$(kubectl -n assessment get pod -l app=app-b -o jsonpath='{.items[0].metadata.name}')"
+
+          kubectl -n assessment exec "${APP_A_POD}" -- test -s /var/secrets/DEMO_SECRET
+          kubectl -n assessment exec "${APP_B_POD}" -- test -s /var/secrets/DEMO_SECRET
+
+          echo "Secret Manager CSI mounts validated for app-a and app-b."
+
+          kubectl -n assessment delete secret app-secrets --ignore-not-found
 
       - name: Get Secondary GKE Credentials
         if: |
@@ -206,17 +211,12 @@ jobs:
         if: |
           (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
           (github.event_name == 'workflow_dispatch' && inputs.deployment == 'deploy')
-        env:
-          DEMO_SECRET: ${{ secrets.APP_DEMO_SECRET }}
         run: |
           kubectl create namespace assessment \
             --dry-run=client \
             -o yaml | kubectl apply -f -
 
-          kubectl -n assessment create secret generic app-secrets \
-            --from-literal=DEMO_SECRET="${DEMO_SECRET}" \
-            --dry-run=client \
-            -o yaml | kubectl apply -f -
+          kubectl apply -f kubernetes/secret-provider-class.yaml
 
           APP_A_IMAGE="${REGISTRY_HOST}/${PROJECT_ID}/${REPOSITORY}/app-a:${GITHUB_SHA}"
           APP_B_IMAGE="${REGISTRY_HOST}/${PROJECT_ID}/${REPOSITORY}/app-b:${GITHUB_SHA}"
@@ -231,6 +231,16 @@ jobs:
 
           kubectl -n assessment get pods
           kubectl -n assessment get services
+
+          APP_A_POD="$(kubectl -n assessment get pod -l app=app-a -o jsonpath='{.items[0].metadata.name}')"
+          APP_B_POD="$(kubectl -n assessment get pod -l app=app-b -o jsonpath='{.items[0].metadata.name}')"
+
+          kubectl -n assessment exec "${APP_A_POD}" -- test -s /var/secrets/DEMO_SECRET
+          kubectl -n assessment exec "${APP_B_POD}" -- test -s /var/secrets/DEMO_SECRET
+
+          echo "Secret Manager CSI mounts validated for app-a and app-b."
+
+          kubectl -n assessment delete secret app-secrets --ignore-not-found
 
 
       - name: Get Primary GKE Credentials for Multi Cluster Ingress

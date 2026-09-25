@@ -48,6 +48,9 @@ jobs:
     name: Terraform Validate Plan Apply
     runs-on: ubuntu-latest
 
+    env:
+      TF_VAR_app_demo_secret: ${{ secrets.APP_DEMO_SECRET }}
+
     defaults:
       run:
         working-directory: ${{ env.TF_WORKING_DIR }}

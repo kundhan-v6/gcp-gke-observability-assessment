@@ -12,6 +12,12 @@ resource "google_compute_subnetwork" "primary" {
 
   private_ip_google_access = true
 
+  log_config {
+    aggregation_interval = "INTERVAL_1_MIN"
+    flow_sampling        = 0.5
+    metadata             = "INCLUDE_ALL_METADATA"
+  }
+
   secondary_ip_range {
     range_name    = "gke-primary-pods"
     ip_cidr_range = "10.20.0.0/16"
@@ -30,6 +36,12 @@ resource "google_compute_subnetwork" "secondary" {
   ip_cidr_range = "10.40.0.0/20"
 
   private_ip_google_access = true
+
+  log_config {
+    aggregation_interval = "INTERVAL_1_MIN"
+    flow_sampling        = 0.5
+    metadata             = "INCLUDE_ALL_METADATA"
+  }
 
   secondary_ip_range {
     range_name    = "gke-secondary-pods"

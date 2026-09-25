@@ -18,6 +18,19 @@ on:
       - '.github/workflows/application.yml'
 
   workflow_dispatch:
+    inputs:
+      deployment:
+        description: 'Build only, or manually deploy the selected feature branch'
+        required: true
+        default: build
+        type: choice
+        options:
+          - build
+          - deploy
+      confirm_shared_project:
+        description: 'For feature-branch deploy, enter DEPLOY_SHARED_PROJECT'
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -36,6 +49,31 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Validate manual branch deploy request
+        if: github.event_name == 'workflow_dispatch' && inputs.deployment == 'deploy'
+        working-directory: .
+        env:
+          CONFIRM_SHARED_PROJECT: ${{ inputs.confirm_shared_project }}
+        run: |
+          if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+            echo "Manual deploy from main is disabled. Main deploys after merge on push." >&2
+            exit 1
+          fi
+
+          if [[ "${CONFIRM_SHARED_PROJECT}" != "DEPLOY_SHARED_PROJECT" ]]; then
+            echo "Explicit shared-project confirmation is required." >&2
+            exit 1
+          fi
+
+          git fetch origin main
+
+          git merge-base --is-ancestor origin/main HEAD || {
+            echo "Branch must include current main before deploying to the shared assessment project." >&2
+            exit 1
+          }
 
       - name: Build App A
         run: |
@@ -50,7 +88,9 @@ jobs:
             ./apps/app-b
 
       - name: Authenticate to Google Cloud
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: |
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && inputs.deployment == 'deploy')
         uses: google-github-actions/auth@v3
         with:
           project_id: gcp-gke-assessment
@@ -58,22 +98,30 @@ jobs:
           service_account: github-terraform@gcp-gke-assessment.iam.gserviceaccount.com
 
       - name: Setup Google Cloud CLI
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: |
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && inputs.deployment == 'deploy')
         uses: google-github-actions/setup-gcloud@v3
 
       - name: Install kubectl
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: |
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && inputs.deployment == 'deploy')
         run: |
           gcloud components install kubectl --quiet
           kubectl version --client
 
       - name: Configure Docker Authentication
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: |
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && inputs.deployment == 'deploy')
         run: |
           gcloud auth configure-docker ${REGISTRY_HOST} --quiet
 
       - name: Tag Application Images
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: |
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && inputs.deployment == 'deploy')
         run: |
           APP_A_IMAGE="${REGISTRY_HOST}/${PROJECT_ID}/${REPOSITORY}/app-a"
           APP_B_IMAGE="${REGISTRY_HOST}/${PROJECT_ID}/${REPOSITORY}/app-b"
@@ -85,7 +133,9 @@ jobs:
           docker tag app-b:test "${APP_B_IMAGE}:latest"
 
       - name: Push App A
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: |
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && inputs.deployment == 'deploy')
         run: |
           APP_A_IMAGE="${REGISTRY_HOST}/${PROJECT_ID}/${REPOSITORY}/app-a"
 
@@ -93,7 +143,9 @@ jobs:
           docker push "${APP_A_IMAGE}:latest"
 
       - name: Push App B
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: |
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && inputs.deployment == 'deploy')
         run: |
           APP_B_IMAGE="${REGISTRY_HOST}/${PROJECT_ID}/${REPOSITORY}/app-b"
 
@@ -101,7 +153,9 @@ jobs:
           docker push "${APP_B_IMAGE}:latest"
 
       - name: Get Primary GKE Credentials
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: |
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && inputs.deployment == 'deploy')
         uses: google-github-actions/get-gke-credentials@v3
         with:
           project_id: gcp-gke-assessment
@@ -109,7 +163,9 @@ jobs:
           location: us-central1-a
 
       - name: Deploy to Primary Cluster
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: |
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && inputs.deployment == 'deploy')
         env:
           DEMO_SECRET: ${{ secrets.APP_DEMO_SECRET }}
         run: |
@@ -137,7 +193,9 @@ jobs:
           kubectl -n assessment get services
 
       - name: Get Secondary GKE Credentials
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: |
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && inputs.deployment == 'deploy')
         uses: google-github-actions/get-gke-credentials@v3
         with:
           project_id: gcp-gke-assessment
@@ -145,7 +203,9 @@ jobs:
           location: us-east1-b
 
       - name: Deploy to Secondary Cluster
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: |
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && inputs.deployment == 'deploy')
         env:
           DEMO_SECRET: ${{ secrets.APP_DEMO_SECRET }}
         run: |
@@ -171,3 +231,24 @@ jobs:
 
           kubectl -n assessment get pods
           kubectl -n assessment get services
+
+
+      - name: Get Primary GKE Credentials for Multi Cluster Ingress
+        if: |
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && inputs.deployment == 'deploy')
+        uses: google-github-actions/get-gke-credentials@v3
+        with:
+          project_id: gcp-gke-assessment
+          cluster_name: gke-primary
+          location: us-central1-a
+
+      - name: Deploy Multi Cluster Services and Ingress
+        if: |
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && inputs.deployment == 'deploy')
+        run: |
+          kubectl apply -f kubernetes/multicluster-ingress.yaml
+
+          kubectl -n assessment get multiclusterservices
+          kubectl -n assessment get multiclusteringress

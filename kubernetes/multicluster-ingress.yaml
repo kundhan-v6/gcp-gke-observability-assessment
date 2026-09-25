@@ -1,0 +1,143 @@
+# ---------------------------------------------------------
+# BackendConfig - Application A
+# ---------------------------------------------------------
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: app-a-backend-config
+  namespace: assessment
+spec:
+  securityPolicy:
+    name: gke-mci-cloud-armor
+  healthCheck:
+    checkIntervalSec: 10
+    timeoutSec: 5
+    healthyThreshold: 2
+    unhealthyThreshold: 2
+    type: HTTP
+    port: 8080
+    requestPath: /app-a/health
+  logging:
+    enable: true
+    sampleRate: 1.0
+
+---
+# ---------------------------------------------------------
+# BackendConfig - Application B
+# ---------------------------------------------------------
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: app-b-backend-config
+  namespace: assessment
+spec:
+  securityPolicy:
+    name: gke-mci-cloud-armor
+  healthCheck:
+    checkIntervalSec: 10
+    timeoutSec: 5
+    healthyThreshold: 2
+    unhealthyThreshold: 2
+    type: HTTP
+    port: 8080
+    requestPath: /app-b/health
+  logging:
+    enable: true
+    sampleRate: 1.0
+
+---
+# ---------------------------------------------------------
+# MultiClusterService - Application A
+# ---------------------------------------------------------
+apiVersion: networking.gke.io/v1
+kind: MultiClusterService
+metadata:
+  name: app-a-mcs
+  namespace: assessment
+  annotations:
+    cloud.google.com/backend-config: '{"ports":{"80":"app-a-backend-config"}}'
+spec:
+  template:
+    spec:
+      selector:
+        app: app-a
+      ports:
+        - name: http
+          protocol: TCP
+          port: 80
+          targetPort: 8080
+  clusters:
+    - link: "us-central1-a/gke-primary"
+    - link: "us-east1-b/gke-secondary"
+
+---
+# ---------------------------------------------------------
+# MultiClusterService - Application B
+# ---------------------------------------------------------
+apiVersion: networking.gke.io/v1
+kind: MultiClusterService
+metadata:
+  name: app-b-mcs
+  namespace: assessment
+  annotations:
+    cloud.google.com/backend-config: '{"ports":{"80":"app-b-backend-config"}}'
+spec:
+  template:
+    spec:
+      selector:
+        app: app-b
+      ports:
+        - name: http
+          protocol: TCP
+          port: 80
+          targetPort: 8080
+  clusters:
+    - link: "us-central1-a/gke-primary"
+    - link: "us-east1-b/gke-secondary"
+
+---
+# ---------------------------------------------------------
+# MultiClusterIngress
+# ---------------------------------------------------------
+apiVersion: networking.gke.io/v1
+kind: MultiClusterIngress
+metadata:
+  name: assessment-global-ingress
+  namespace: assessment
+  annotations:
+    networking.gke.io/static-ip: "8.232.28.44"
+spec:
+  template:
+    spec:
+
+      # Required by MultiClusterIngress.
+      # Unmatched requests go to App A.
+      backend:
+        serviceName: app-a-mcs
+        servicePort: 80
+
+      rules:
+        - http:
+            paths:
+
+              # Application A
+              - path: /app-a
+                backend:
+                  serviceName: app-a-mcs
+                  servicePort: 80
+
+              - path: /app-a/*
+                backend:
+                  serviceName: app-a-mcs
+                  servicePort: 80
+
+              # Application B
+              - path: /app-b
+                backend:
+                  serviceName: app-b-mcs
+                  servicePort: 80
+
+              - path: /app-b/*
+                backend:
+                  serviceName: app-b-mcs
+                  servicePort: 80
